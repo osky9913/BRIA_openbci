@@ -1,0 +1,190 @@
+import * as THREE from 'three';
+import data  from './data.json';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+
+import { useEffect, useRef, useState } from "react";
+
+
+function processData(data) {
+    // Process the data
+    let returnData = data["data"][0]
+    const scaleFactor = 1000; // Adjust this factor based on your data's range
+    const scaledData = returnData.map(channel => channel.map(value => value * scaleFactor));
+    console.log(scaledData);
+    
+
+    return scaledData;
+}
+
+function createVerticalLine(x, height) {
+    var material = new THREE.LineBasicMaterial({ color: "silver" });
+    var points = [];
+    points.push(new THREE.Vector3(x, 0, 0));
+    points.push(new THREE.Vector3(x, height, 0));
+
+    var geometry = new THREE.BufferGeometry().setFromPoints(points);
+
+    return new THREE.Line(geometry, material);
+}
+
+
+
+
+let scene = new THREE.Scene();
+scene.add( new THREE.AmbientLight( 0xcccccc ) );
+
+var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set( -20, 1.3, 0 );
+var renderer = new THREE.WebGLRenderer();
+const _controls = new OrbitControls(camera, renderer.domElement);
+const clock = new THREE.Clock();
+
+
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); // Soft white light
+scene.add(ambientLight);
+
+// Directional Light
+const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+directionalLight.position.set(1, 1, 1); // Position the light
+scene.add(directionalLight);
+
+
+function Eeg() {
+  const  firstRender = useRef(false);  
+  const refContainer = useRef(null);
+  const  [myData, setData] = useState(null);
+
+    useEffect(() => {
+        console.log("useEffect");
+        if( firstRender.current === false ) {
+            firstRender.current = true;
+
+            setData(processData(data));
+        // Process the data
+
+        // === THREE.JS CODE START ===
+
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        // document.body.appendChild( renderer.domElement );
+        // use ref as a mount point of the Three.js scene instead of the document.body
+
+            refContainer.current && refContainer.current.appendChild( renderer.domElement );
+            var size = 1000;
+            var divisions = 100;
+
+            scene.add(new THREE.GridHelper(size, divisions));
+            // Add vertical grid lines
+            var height = 10;
+            for (var i = 0; i < 1; i++) {
+                scene.add(createVerticalLine(i, height));
+            }
+
+            /*
+            var geometry = new THREE.BoxGeometry(2, 1, 1);
+            var material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+            var cube = new THREE.Mesh(geometry, material);
+            */
+            //scene.add(cube);
+            camera.position.z = 5;
+
+            
+            let animate = function () {
+                requestAnimationFrame(animate);
+                //cube.rotation.x += 0.01;
+                //cube.rotation.y += 0.01;
+                renderer.render(scene, camera);
+            };
+            animate();
+        }
+    }, []);
+
+    useEffect(() => {
+        if( myData === null ) {
+            return;
+        }
+
+        //animate(cube);
+
+        
+    
+        
+
+        const tubeGeometries = myData.map((channelData, index) => {
+            const points = channelData.map((value, i) => new THREE.Vector3(0, value+index, i));
+            const path = new THREE.CatmullRomCurve3(points);
+            const tubeGeometry = new THREE.TubeGeometry(path, 64, 0.1, 8, false);
+            tubeGeometry.setDrawRange(0, 0); // Start with no portion being drawn
+            return tubeGeometry;
+        }); 
+
+        const tubeMeshes = tubeGeometries.map((geometry, index) => {
+            /*
+            const material = new THREE.MeshBasicMaterial({
+                color: new THREE.Color(`hsl(${(index / myData.length) * 360}, 100%, 50%)`),
+                shininess: 100,
+                side: THREE.DoubleSide,
+
+            });
+            */
+
+            const material = new THREE.MeshPhongMaterial({
+                color: new THREE.Color(`hsl(${(index / tubeGeometries.length) * 360}, 100%, 50%)`),
+                specular: 0x555555, // Specular highlights
+                shininess: 30 // Shininess level
+            });
+            const tube = new THREE.Mesh(geometry, material);
+            scene.add(tube);
+            return tube;
+        });
+
+        let elapsedTime = 0;
+        const animationDuration = 5; // Duration in seconds for each line to be fully drawn
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            elapsedTime += clock.getDelta(); // Update elapsed time
+
+            tubeGeometries.forEach((geometry, index) => {
+                const totalLength = geometry.attributes.position.count;
+                const lengthToDraw = (elapsedTime / animationDuration) * totalLength;
+                geometry.setDrawRange(0, Math.min(lengthToDraw, totalLength));
+            });
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        /*
+        myData.forEach((channelData, index) => {
+            // Create a path from the EEG data points
+            const points = channelData.map((value, i) => new THREE.Vector3(0, value+index, i));
+            const path = new THREE.CatmullRomCurve3(points);
+        
+            // Create TubeGeometry along the path
+            const tubeGeometry = new THREE.TubeGeometry(path, 64, 0.05, 8, false);
+            tubeGeometry.setDrawRange(0, 0)
+            
+            // Create a material with a unique color for each channel
+            
+        
+            // Create a mesh and add it to the scene
+            const tube = new THREE.Mesh(tubeGeometry, material);
+            scene.add(tube);
+        });
+        */
+
+        
+        
+
+  }, [myData]);
+
+  return (
+    <div ref={refContainer}/>
+
+  );
+}
+
+export default Eeg
+

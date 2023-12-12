@@ -19,12 +19,18 @@
     "e2e": "playwright test"
   },
   "dependencies": {
-    "electron-updater": "^6.1.1"
+    "d3": "^7.8.5",
+    "electron-updater": "^6.1.1",
+    "mathbox": "^2.3.2-rc1",
+    "react-d3-library": "^1.1.8",
+    "three": "^0.158.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.37.1",
+    "@types/d3": "^7.4.3",
     "@types/react": "^18.2.20",
     "@types/react-dom": "^18.2.7",
+    "@types/three": "^0.158.3",
     "@vitejs/plugin-react": "^4.0.4",
     "autoprefixer": "^10.4.16",
     "electron": "^26.0.0",

@@ -1,26 +1,37 @@
 from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds
 import asyncio
 import data_processing
-
+from config import BOARD, SERIAL_PORT, AWS, AWS_TOKEN, AWS_ENDPOINT
 
 
 
 # Global buffer for EEG data
 eeg_data_buffer = []
+global_board = None
 
-async def start_eeg_stream(serial_port):
-    params = BrainFlowInputParams()
-    params.serial_port = serial_port
-    board = BoardShim(BoardIds.CYTON_DAISY_BOARD, params)
-    board.prepare_session()
-    board.start_stream()
-    # Do not fetch data here, just start the stream
-    return board  # Return the board object for further use
 
-async def get_real_time_eeg_data(board):
+
+async def start_streaming():
+    if global_board is not None:
+        global_board.start_stream()
+        return global_board
+
+async def prepare_eeg_stream(serial_port):
+    global global_board
+    if global_board is None:
+        params = BrainFlowInputParams()
+        if BOARD != BoardIds.SYNTHETIC_BOARD:
+            params.serial_port = serial_port
+        global_board = BoardShim(BOARD, params)
+        global_board.prepare_session()
+    return global_board
+
+
+
+async def get_real_time_eeg_data():
     # Fetch real-time data
-    if board.is_prepared():
-        data = board.get_board_data()  # Get the latest 250 samples, for example
+    if global_board and global_board.is_prepared():
+        data = global_board.get_current_board_data(125)  # Get the latest 250 samples, for example
         processed_data = process_eeg_data(data)
         eeg_data_buffer.append(processed_data )
         if eeg_data_buffer:

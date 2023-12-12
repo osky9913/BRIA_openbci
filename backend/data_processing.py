@@ -1,5 +1,4 @@
 
-import asyncio
 from brainflow.board_shim import BoardShim, BoardIds
 import mne 
 import numpy as np
@@ -20,11 +19,12 @@ def process_data(data):
     # For now, it just returns the raw data
     eeg_channels = BoardShim.get_eeg_channels(BoardIds.CYTON_DAISY_BOARD)
     eeg_data = data[eeg_channels, :]
+    
     eeg_data = eeg_data / 1000000 
 
 
     
     
-    return { "data" : [eeg_data.tolist()] }
+    return eeg_data.tolist()
 
 
