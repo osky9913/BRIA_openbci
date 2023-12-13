@@ -1,5 +1,4 @@
 run:
-	export $(cat .env | xargs) && rails c
 	uvicorn app:app --reload
 
 

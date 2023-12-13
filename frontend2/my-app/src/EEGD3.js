@@ -1,6 +1,11 @@
 import React, { useEffect, useRef } from "react";
 import * as d3 from "d3";
 
+const colorScale = d3.scaleOrdinal(d3.schemeSpectral);
+const channelOffset = 500 / 10; 
+
+
+
 function EEGD3() {
   const ws = useRef(null);
   const dataRef = useRef(Array.from({ length: 16 }, () => Array(1).fill(0)));
@@ -8,7 +13,7 @@ function EEGD3() {
   const [width, height] = [600, 400]; // Width and height of the chart
   const margin = { top: 20, right: 20, bottom: 30, left: 40 };
   const sfqs = 125; // Sampling frequency
-  const dataWindow = sfqs * 5;
+  const dataWindow = sfqs * 1;
 
   // Initialize D3 chart
   useEffect(() => {
@@ -78,27 +83,30 @@ function EEGD3() {
       .domain([0, dataWindow])
       .range([margin.left, width - margin.right]);
 
-    const yScale = d3
-      .scaleLinear()
-      .domain([-1, 1]) // Assuming EEG data range
-      .range([height - margin.bottom, margin.top]);
+    const yScales = dataRef.current.map(channelData => 
+        d3.scaleLinear()
+          .domain([-1, 1]) // Adjust if different ranges per channel are needed
+          .range([height - margin.bottom, margin.top])
+    );
 
-    const line = d3
-      .line()
-      .x((d, i) => xScale(i))
-      .y((d) => yScale(d))
-      .curve(d3.curveBasis); // Smooths the line
+    dataRef.current.forEach((channelData, index) => {
+        const yScale = yScales[index];
+        const line = d3.line()
+            .x((d, i) => xScale(i))
+            .y((d) => yScale(d))
+            .curve(d3.curveBasis);
 
-    svg
-      .selectAll(".line")
-      .data(dataRef.current)
-      .join("path")
-      .attr("class", "line")
-      .attr("d", line)
-      .attr("fill", "none")
-      .attr("stroke", "steelblue")
-      .attr("stroke-width", 1.5);
-  };
+        svg
+          .selectAll(`.line-channel-${index}`)
+          .data([channelData])
+          .join("path")
+          .attr("class", `line line-channel-${index}`)
+          .attr("d", line)
+          .attr("fill", "none")
+          .attr("stroke", colorScale(index)) // Use a color scale or specific colors
+          .attr("transform", `translate(0,${index * channelOffset})`); // Offset each line
+    });
+};
 
   return (
     <div>
