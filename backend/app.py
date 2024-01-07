@@ -10,6 +10,7 @@ from datetime import datetime
 
 app = FastAPI()
 kinesis_client = None
+global_board = None
 from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
@@ -35,10 +36,11 @@ async def prepare_stream():
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-
+    global global_board
     await websocket.accept()
     #await prepare_stream()
-    global_board = await start_streaming()
+    if global_board == None:
+        global_board = await start_streaming()
     try:
         while True:
             data = await get_real_time_eeg_data()
@@ -46,12 +48,13 @@ async def websocket_endpoint(websocket: WebSocket):
                 await websocket.send_json((data))
                 stream_name = 'eeg-stream'  # Replace with your Kinesis stream name
                 partition_key = str(datetime.utcnow())
-                #send_to_kinesis(stream_name, partition_key, data)
+                send_to_kinesis(stream_name, partition_key, data)
 
 
             await asyncio.sleep(0.2)
     except Exception as e:
         print(f"WebSocket error: {e}")
+        
     finally:
         if global_board:
             global_board.stop_stream()
