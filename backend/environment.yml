@@ -1,0 +1,6 @@
+name: mne
+channels:
+  - defaults
+dependencies:
+  - mne
+prefix: /Users/martin/anaconda3/envs/mne

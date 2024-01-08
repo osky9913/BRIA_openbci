@@ -1,6 +1,6 @@
 import asyncio
 from fastapi import FastAPI, WebSocket
-from data_processing import extract_bci_features, get_info, process_data_with_fft
+from data_processing import  get_info, process_data_with_fft
 from eeg_controller import get_real_time_eeg_data, prepare_eeg_stream, process_eeg_data, start_streaming
 from config import BOARD, SERIAL_PORT, AWS, AWS_TOKEN, AWS_ENDPOINT
 import boto3
@@ -93,8 +93,8 @@ async def websocket_ica_wendpint(websocket: WebSocket):
         print(f"WebSocket error: {e}")
         
     finally:
-        if global_board:
-            global_board.stop_stream()
+        #if global_board:
+            #global_board.stop_stream()
         await websocket.close()
 
 @app.websocket("/fft")
@@ -114,10 +114,8 @@ async def fft_websocket_endpoint(websocket: WebSocket):
                 print("I am her3e")
                 
                 fft_data = process_data_with_fft(data)
-                print(fft_data)
-                print(fft_data)
+
                 await websocket.send_json((fft_data))
-                print(fft_data)
 
             await asyncio.sleep(0.2)
     except Exception as e:
@@ -130,6 +128,7 @@ async def fft_websocket_endpoint(websocket: WebSocket):
 
 
 
+"""
 @app.websocket("/bci_features")
 async def bci_features_websocket_endpoint(websocket: WebSocket):
     global global_board
@@ -153,7 +152,8 @@ async def bci_features_websocket_endpoint(websocket: WebSocket):
         if global_board:
             global_board.stop_stream()
         await websocket.close()
-
+"""
+        
 def send_to_kinesis(stream_name, partition_key, data):
     global kinesis_client
 

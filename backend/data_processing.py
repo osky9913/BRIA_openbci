@@ -11,7 +11,7 @@ ch_names = BoardShim.get_eeg_names(BoardIds.CYTON_DAISY_BOARD)
 ch_types = ['eeg'] * len(ch_names)
 sfreq = BoardShim.get_sampling_rate(BoardIds.CYTON_DAISY_BOARD)
 info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types=ch_types)
-ICA_C = FastICA(n_components=3, algorithm='parallel', whiten=False)
+ICA_C = FastICA(n_components=20, algorithm='parallel', whiten='arbitrary-variance', max_iter=1000, tol=0.01, random_state=0)
 
 
 def get_info():
@@ -40,10 +40,5 @@ def process_data_with_fft(data):
     fft_data = fft(data)
     fft_magnitude = np.abs(fft_data)
     return fft_magnitude.tolist()
-
-
-def band_power(data, sf, band):
-    freq, power = welch(data, sf, nperseg=1024)
-    return np.trapz(power[(freq >= band[0]) & (freq <= band[1])], freq[(freq >= band[0]) & (freq <= band[1])])
 
 
