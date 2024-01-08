@@ -1,11 +1,15 @@
 import asyncio
 from fastapi import FastAPI, WebSocket
-from data_processing import get_info
+from data_processing import extract_bci_features, get_info, process_data_with_fft
 from eeg_controller import get_real_time_eeg_data, prepare_eeg_stream, process_eeg_data, start_streaming
 from config import BOARD, SERIAL_PORT, AWS, AWS_TOKEN, AWS_ENDPOINT
 import boto3
 import json 
 from datetime import datetime
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+import numpy as np
+
 
 
 app = FastAPI()
@@ -34,6 +38,10 @@ async def prepare_stream():
 
     return {"status": "Board prepared"}
 
+@app.get("/get_info")
+async def send_info():
+    return get_info()
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     global global_board
@@ -43,12 +51,13 @@ async def websocket_endpoint(websocket: WebSocket):
         global_board = await start_streaming()
     try:
         while True:
-            data = await get_real_time_eeg_data()
+            data = await get_real_time_eeg_data(ica=False)
             if data:
+                print("Sending")
                 await websocket.send_json((data))
                 stream_name = 'eeg-stream'  # Replace with your Kinesis stream name
                 partition_key = str(datetime.utcnow())
-                send_to_kinesis(stream_name, partition_key, data)
+                #send_to_kinesis(stream_name, partition_key, data)
 
 
             await asyncio.sleep(0.2)
@@ -61,8 +70,89 @@ async def websocket_endpoint(websocket: WebSocket):
         await websocket.close()
 
 
+@app.websocket("/ica")
+async def websocket_ica_wendpint(websocket: WebSocket):
+    global global_board
+    await websocket.accept()
+    #await prepare_stream()
+    if global_board == None:
+        global_board = await start_streaming()
+    try:
+        while True:
+            data = await get_real_time_eeg_data(ica=True)
+            if data:
+                await websocket.send_json((data))
+                print((data))
+                stream_name = 'eeg-stream'  # Replace with your Kinesis stream name
+                partition_key = str(datetime.utcnow())
+                #send_to_kinesis(stream_name, partition_key, data)
 
 
+            await asyncio.sleep(0.2)
+    except Exception as e:
+        print(f"WebSocket error: {e}")
+        
+    finally:
+        if global_board:
+            global_board.stop_stream()
+        await websocket.close()
+
+@app.websocket("/fft")
+async def fft_websocket_endpoint(websocket: WebSocket):
+    print("I am here")
+    global global_board
+    await websocket.accept()
+    if global_board == None:
+        global_board = await start_streaming()
+
+    try:
+        while True:
+            data = await get_real_time_eeg_data()
+            print("I am here2")
+            
+            if data:
+                print("I am her3e")
+                
+                fft_data = process_data_with_fft(data)
+                print(fft_data)
+                print(fft_data)
+                await websocket.send_json((fft_data))
+                print(fft_data)
+
+            await asyncio.sleep(0.2)
+    except Exception as e:
+        print(f"WebSocket error: {e}")
+        
+    finally:
+        if global_board:
+            global_board.stop_stream()
+        await websocket.close()
+
+
+
+@app.websocket("/bci_features")
+async def bci_features_websocket_endpoint(websocket: WebSocket):
+    global global_board
+    await websocket.accept()
+    if global_board == None:
+        global_board = await start_streaming()
+
+    try:
+        while True:
+            eeg_data = await get_real_time_eeg_data()
+            if eeg_data:
+                plot_5d_bci_features(eeg_data,125)
+                exit(1)
+                bci_features = extract_bci_features(eeg_data)
+                await websocket.send_json(bci_features)
+            
+            await asyncio.sleep(0.2)
+    except Exception as e:
+        print(f"WebSocket error: {e}")
+    finally:
+        if global_board:
+            global_board.stop_stream()
+        await websocket.close()
 
 def send_to_kinesis(stream_name, partition_key, data):
     global kinesis_client
@@ -94,4 +184,6 @@ def send_to_kinesis(stream_name, partition_key, data):
 
 # Example usage
  # Using current timestamp as partition key
+
+
 

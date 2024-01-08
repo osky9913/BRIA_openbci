@@ -28,15 +28,15 @@ async def prepare_eeg_stream(serial_port):
 
 
 
-async def get_real_time_eeg_data():
+async def get_real_time_eeg_data(ica=False):
     # Fetch real-time data
     if global_board and global_board.is_prepared():
         data = global_board.get_current_board_data(125)  # Get the latest 250 samples, for example
-        processed_data = process_eeg_data(data)
+        processed_data = process_eeg_data(data,ica)
         eeg_data_buffer.append(processed_data )
         if eeg_data_buffer:
             return eeg_data_buffer.pop(0)
     return None
 
-def process_eeg_data(data):
-    return data_processing.process_data(data)
+def process_eeg_data(data,ica):
+    return data_processing.process_data(data,ica)
